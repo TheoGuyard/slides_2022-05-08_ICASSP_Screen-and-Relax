@@ -1,0 +1,333 @@
+%!TEX output_directory = aux
+%!TEX aux_directory = aux
+
+\documentclass[10pt]{beamer}
+
+\usetheme[
+  numbering=fraction,
+  block=fill,
+  % background=dark
+  ]{metropolis}
+
+\usepackage{appendixnumberbeamer}
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+%\usepackage{pgfplots}
+%\usepgfplotslibrary{dateplot}
+
+\usepackage[absolute,overlay]{textpos}
+\setlength{\TPHorizModule}{\paperwidth}
+\setlength{\TPVertModule}{\paperheight}
+
+\include{headings/packages}
+\include{headings/shortcuts}
+\include{headings/macros}
+\usepackage{kmath}
+\newcommand{\emphone}[1]{{\color{orange}#1}}
+\newcommand{\emphtwo}[1]{{\color{teal}#1}}
+
+\title{Screen \& Relax}
+\subtitle{Accelerating the resolution of the Elastic-Net by safe identification of the solution support}
+\date{ICASSP 2022}
+\author{Theo Guyard${}^{\star}$, Cedric Herzet${}^{\dagger}$, Clement Elvira${}^{\ddagger}$}
+\institute{
+  \(^{\star}\) Univ Rennes, INSA Rennes, CNRS, IRMAR-UMR 6625, F-35000 Rennes, France \\ 
+	\(^{\dagger}\) INRIA Rennes-Bretagne Atlantique, Campus de Beaulieu, 35000 Rennes, France \\ 
+  \(^{\ddagger}\) SCEE/IETR UMR CNRS 6164, CentraleSupélec, 35510 Cesson Sévigné, France
+}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \maketitle
+\end{frame}
+
+\begin{frame}{Table of contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+\section{The Elastic-Net problem}
+
+\begin{frame}{Sparse-linear problem}
+  \textbf{Ingredients :}
+  \begin{itemize}
+    \item An \emphone{observation} $\obs \in \kR^{\ddim}$
+    \item A \emphone{dictionary} $\dic=[\atom_{\idx}]_{\idx=1}^{\pdim} \in \kR^{\ddim\times\pdim}$ (columns $\equiv$ \emphone{atoms})
+  \end{itemize}
+
+  \pause
+
+  \textbf{Objectives :}
+  \begin{itemize}
+    \item Approximate the \emphone{observation} as a linear combination of the \emphone{atoms}
+    \item The linear combination must be \emph{sparse}
+  \end{itemize}
+
+  \pause
+
+  \begin{center}
+    \begin{minipage}{0.5\linewidth}
+      \begin{block}{Problem}
+        \centering
+        Find $\pv$ \emph{sparse} such that $\obs \simeq \dic \pv$
+      \end{block}
+    \end{minipage}
+  \end{center}
+
+  \pause
+
+  The vector $\pv$ weights each atom in the approximation.
+\end{frame}
+
+\begin{frame}{The Elastic-net problem}
+  \textbf{Idea :} Consider the problem
+  \begin{block}{Elastic-net}
+    \begin{equation}
+      \label{prob:primal}
+      \pvopt = \argmin_{\pv} \ 
+      \Big\{
+      \pfunc(\pv) = 
+        \tfrac{1}{2}\norm{\obs-\dic\pv}{2}^2
+        + \regone \norm{\pv}{1}
+        + \tfrac{\regtwo}{2} \norm{\pv}{2}^2
+      \Big\}
+      \tag{$\ppb$}
+    \end{equation}
+  \end{block}  
+  where $\regone>0$ and $\regtwo>0$ are two hyperparameters. \\~\\
+
+  \pause
+
+  \textbf{Properties :}
+  \begin{itemize}
+    \item Ensures a good approximation
+    \item Induces sparsity
+    \item Good statistical properties
+    \item Convex problem
+  \end{itemize}
+\end{frame}
+
+\section{Screening and relaxing tests}
+
+\begin{frame}{Main idea}
+  \textbf{Sparse problem :}
+  \begin{itemize}
+    \item Where are \emphone{zero} entries of $\pvopt$ ?
+    \item Where are \emphone{non-zero} entries of $\pvopt$ ?
+  \end{itemize}
+
+  \vspace{-0.25cm}
+  \pause
+
+  \begin{itemize}
+    \item Can we accelerate solution methods using this knowledge ?
+  
+  \end{itemize}
+  
+  \vspace{-0.25cm}
+  \pause
+
+  \begin{itemize}
+    \item[$\rightarrow$] Spoiler alert : yes !
+    \item[$\rightarrow$] We can leverage \emphone{duality} and \emphone{optimality conditions}
+  \end{itemize}
+
+  \vspace{0.5cm}
+  \pause
+
+
+  \begin{block}{Fenchel dual of \eqref{prob:primal}}
+  \begin{equation}
+    \label{prob:dual}
+      \dvopt = \argmax_{\dv} \ 
+      \Big\{
+        \dfunc(\dv) = 
+        \tfrac{1}{2} \norm{\obs}{2}^2 
+        - \tfrac{1}{2}\norm{\obs - \dv}{2}^2 
+        -\tfrac{1}{2\regtwo}
+        \|[\abs{\ktranspose{\dic}\dv} - \regone]_+\|_2^2
+      \Big\}
+      \tag{\(\Dc\)}
+  \end{equation}
+\end{block}
+\end{frame}
+
+\begin{frame}{Screening and relaxing tests}
+  \textbf{Optimality conditions :}
+  \begin{equation*}
+    \begin{array}{rcl}
+      \abs{\transp{\atom_{\idx}}\dvopt} \leq \regone &\iff& \pvopte{\idx} = 0 \\
+      \abs{\transp{\atom_{\idx}}\dvopt} > \regone &\iff& \pvopte{\idx} \neq 0 
+    \end{array}
+  \end{equation*}
+
+  \pause
+  \begin{center}
+    \rotatebox[origin=c]{-90}{\LARGE$\leadsto$}
+  \end{center}
+  \vspace{-0.2cm}
+
+  \textbf{\emphone{Relaxed} optimality condition :} Let $\safesphere(\dv,\sphereradius)$ be a spherical region containing $\dvopt$, then
+  \begin{equation*}
+    \begin{array}{rcl}
+      \abs{\transp{\atom_{\idx}}\dv} + \sphereradius < \regone &\implies& \pvopte{\idx} = 0 \qquad \text{\emphone{(screening test)}} \\
+      \abs{\transp{\atom_{\idx}}\dv} - \sphereradius > \regone &\implies& \pvopte{\idx} \neq 0 \qquad \text{\emphone{(relaxing test)}} 
+    \end{array}
+  \end{equation*}
+\end{frame}
+
+% \begin{frame}{Screening and relaxing tests}
+%   \begin{figure}
+%     \includegraphics[width=0.8\linewidth]{img/1.png}
+%   \end{figure}
+% \end{frame}
+
+% \begin{frame}{Screening and relaxing tests}
+%   \begin{figure}
+%     \includegraphics[width=0.8\linewidth]{img/2.png}
+%   \end{figure}
+% \end{frame}
+
+% \begin{frame}{Screening and relaxing tests}
+%   \begin{figure}
+%     \includegraphics[width=0.8\linewidth]{img/3.png}
+%   \end{figure}
+% \end{frame}
+
+% \begin{frame}{Screening and relaxing tests}
+%   \begin{figure}
+%     \includegraphics[width=0.8\linewidth]{img/4.png}
+%   \end{figure}
+% \end{frame}
+
+% \begin{frame}{Screening and relaxing tests}
+%   \begin{figure}
+%     \includegraphics[width=0.8\linewidth]{img/5.png}
+%   \end{figure}
+% \end{frame}
+
+\section{Dimensionality reduction}
+
+\begin{frame}{Problem reduction}
+  \begin{alertblock}{With screening test}
+    \emphone{Zero} entries of $\pvopt$ can be \emphone{discarded} from the problem without changing the objective value.
+  \end{alertblock}
+  \vspace{1.5cm}
+
+  \pause
+
+  \begin{alertblock}{With relaxing test}
+    \emphone{Nonzero} entries of $\pvopt$ can be expressed as a \emphone{linear combination} of all the other entries.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Problem reformulation}
+  \textbf{Let $(\setnul,\setposneg,\setund)$ be subsets of zero, non-zero and unclassified indices of $\pvopt$ :}
+  \begin{equation*}
+    \pvopt = \argmin_{\pv} \ 
+    \Big\{
+    \pfunc(\pv) = 
+      \tfrac{1}{2}\norm{\emphone{\obs}-\emphone{\dic}\pv}{2}^2
+      + \regone \norm{\pv}{1}
+      + \tfrac{\regtwo}{2} \|\pv\|_{\emphone{2}}^2
+    \Big\}
+  \end{equation*}
+
+  \pause
+  \begin{center}
+    Solve an $\pdim$ dimensional problem
+  \end{center}
+
+  \pause
+  \vspace{-0.2cm}
+  \begin{center}
+    \vspace{0.1cm}
+    \rotatebox[origin=c]{-90}{\LARGE$\leadsto$}
+  \end{center}
+  \vspace{-0.2cm}
+
+  \begin{equation*}
+    \begin{array}{rl}
+      \pvopt_{\setund} &= \argmin_{\pv} \ 
+      \Big\{
+      \reduced{\pfunc}(\pv) = 
+        \tfrac{1}{2}\norm{\emphone{\reduced{\obs}}-\emphone{\reduced{\dic}}\pv}{2}^2
+        + \regone \norm{\pv}{1}
+        + \tfrac{\regtwo}{2} \|\pv\|_{\emphone{\matnorm}}^2
+      \Big\} \\
+      \pvopt_{\setposneg} &= \matred\pvopt_{\setund} + \vecred \\
+      \pvopt_{\setnul} &= \0
+    \end{array}
+  \end{equation*}
+
+  \pause
+  \begin{itemize}
+    \item Compute $\reduced{\obs}$, $\reduced{\dic}$, $\matnorm$, $\matred$ and $\vecred$ (linear algebra operations)
+    \item Solve an $\pdim-\card{\setnul}-\card{\setposneg}$ dimensional problem
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Dynamic Screen \& Relax principle}
+  \begin{figure}
+    \centering
+    \begin{minipage}{0.8\linewidth}
+      \begin{algorithm}[H]
+        \small
+        \DontPrintSemicolon
+        \SetKwInOut{Input}{Input}
+        \Input{$\pv^{(0)}$, $\dic$, $\obs$, $\regone$, $\regtwo$}
+        
+        \BlankLine
+        \((\setnul,\setposneg,\setund) \leftarrow (\emptyset,\emptyset,\{1,\dots,\pdim\})\)\;
+        \BlankLine
+
+        \While{convergence criterion is not met}{
+          %
+          Update the current iterate \;
+          Compute a new safe sphere \;
+          Update $(\setnul,\setposneg,\setund)$ with screening and relaxing tests\;
+          Update the problem data\;
+          \If{$\setund = \emptyset$}{
+            The solution is available in closed form
+          }
+        }
+        \caption{``Screen \& Relax'' solving procedure}
+      \end{algorithm}
+    \end{minipage}
+  \end{figure}
+\end{frame}
+
+\section{Some numerical results}
+
+\begin{frame}{Some numerical results}
+  \textbf{Setup :} Percentage of instances solved up to a given accuracy for a fixed FLOPs budget.
+  
+  \pause
+  \begin{figure}
+    \includegraphics[width=\linewidth]{img/6.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Some numerical results}
+  \textbf{Setup :} Percentage of instances solved up to a given accuracy for a fixed FLOPs budget.
+  \begin{figure}
+    \includegraphics[width=\linewidth]{img/7.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Some numerical results}
+  \textbf{Setup :} Percentage of instances solved up to a given accuracy for a fixed FLOPs budget.
+  \begin{figure}
+    \includegraphics[width=\linewidth]{img/8.png}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{Some numerical results}
+  \textbf{Setup :} Percentage of instances solved up to a given accuracy for a fixed FLOPs budget.
+  \begin{figure}
+    \includegraphics[width=\linewidth]{img/9.png}
+  \end{figure}
+\end{frame}
+
+\end{document}
